@@ -62,7 +62,16 @@
 - extras? (R², accuracy)
 
 ## Organization
-- shared: loading, split, sampler, learning-curve loop, plotting
-- one script per dataset
+- shared code (`lab/`): sampler, models, learning-curve loop, CV, plotting
+- per dataset (`lab/data_<name>.py`, written by the dataset owner): loader + split
+- decided: one small split function per dataset, no generic "default splitter" module
+    - why: the right split is a data decision (stratify on price, cut by date,
+      group by week, ...) and sklearn already provides the building blocks, so
+      each split is 2-5 readable lines; a configurable shared splitter would be
+      more code than all four splits together
+    - what stays shared: the return format (`X_train, X_val, y_train, y_val`),
+      ~20% validation, fixed seed/cutoff, and CV folds matching the split
+    - each split's docstring says why -> goes into the report's "Split" paragraph
+- one notebook per dataset (`notebooks/`), figures in `figures/`, results in `results/`
 - same plot style / naming
 - report format? who writes intro / shared parts? due 26 Oct
