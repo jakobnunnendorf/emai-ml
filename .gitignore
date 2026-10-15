@@ -3,6 +3,6 @@
 .DS_Store
 
 # local Python environment / caches
-.venv/
+.venv
 __pycache__/
 .ipynb_checkpoints/

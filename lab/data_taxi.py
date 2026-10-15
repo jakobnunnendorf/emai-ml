@@ -14,6 +14,12 @@ therefore never read them; the model has to guess the call type from WHEN
 and WHERE the trip happened. TRIP_ID / TAXI_ID are identifiers and DAY_TYPE
 is the same value in every row, so they are skipped as well.
 
+Split: TEMPORAL. Training = trips before a cutoff date, validation = the last
+~20% of days (mid-April to end of June 2014). This mimics the real use case
+(learn from the past, predict new trips) and keeps trips of the same day,
+which share weather, events, etc., on one side of the split. Cross-validation
+uses whole months as folds for the same reason (see month_groups).
+
 Features we build (one row per trip):
     hour, weekday          from TIMESTAMP (Porto local time), categorical
     n_points               number of GPS points; one every 15 s, so this is
@@ -31,6 +37,7 @@ import json
 
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 
 from lab import DATA_DIR
 
@@ -70,6 +77,8 @@ def _features_from_chunk(chunk: pd.DataFrame) -> pd.DataFrame:
         "end_lon": points.map(lambda p: p[-1][0]),
         "end_lat": points.map(lambda p: p[-1][1]),
         TARGET: chunk[TARGET],
+        # Not a feature: only used to split by date (see split_taxi).
+        "time": time,
     })
     features["distance_km"] = haversine_km(
         features["start_lon"], features["start_lat"], features["end_lon"], features["end_lat"]
@@ -104,14 +113,19 @@ def build_taxi_features(csv_path=None, out_path=None, chunksize=100_000):
 
 
 def load_taxi(max_rows=None, seed=0):
-    """Return (X, y) for the taxi dataset.
+    """Return (X, y, time) for the taxi dataset.
+
+    time is the start time of each trip. It is NOT a feature; it is returned
+    separately so split_taxi can split by date.
 
     max_rows: use a random subset of this many trips (handy on a laptop);
               None = all ~1.7M trips.
     """
     path = DATA_DIR / "taxi_features.parquet"
-    if not path.exists():
-        print("feature cache not found, building it (takes about a minute) ...")
+    # (Re)build the cache if it is missing or was made by an older version
+    # of this module without the "time" column.
+    if not path.exists() or "time" not in pq.read_schema(path).names:
+        print("building the feature cache (takes about a minute) ...")
         build_taxi_features(out_path=path)
 
     df = pd.read_parquet(path)
@@ -123,7 +137,26 @@ def load_taxi(max_rows=None, seed=0):
     for column in CATEGORICAL:
         df[column] = df[column].astype("category")
 
-    X = df.drop(columns=TARGET)
+    X = df.drop(columns=[TARGET, "time"])
     y = df[TARGET]
     assert not {"ORIGIN_CALL", "ORIGIN_STAND"} & set(X.columns), "leaky columns must not be features"
-    return X, y
+    return X, y, df["time"]
+
+
+def split_taxi(X, y, time, val_fraction=0.2):
+    """Temporal split: the last ~20% of days become the validation set.
+
+    The cutoff is the day on which 80% of the trips have happened, rounded
+    down to midnight, so no day is split between training and validation.
+    Returns X_train, X_val, y_train, y_val (like train_test_split).
+    """
+    cutoff = time.quantile(1 - val_fraction).normalize()
+    is_val = time >= cutoff
+    print(f"training: trips before {cutoff:%Y-%m-%d}, validation: from {cutoff:%Y-%m-%d} on")
+    return X[~is_val], X[is_val], y[~is_val], y[is_val]
+
+
+def month_groups(time):
+    """Month of each trip ("2013-07", ...), used as CV groups so that every
+    CV fold holds out whole months (sklearn GroupKFold)."""
+    return time.dt.strftime("%Y-%m")

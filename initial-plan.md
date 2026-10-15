@@ -13,7 +13,10 @@
 
 ## Prepare Data -> Jakob
 - 20% -> Validation set (do not touch for training)
-    - fixed seed, stratified for class?
+    - decided: split is dataset-specific -> `split_<name>()` next to each loader,
+      written by the dataset owner (automobile: price-stratified random,
+      taxi: temporal, last ~20% of days; wine: stratified random; power: by time blocks)
+    - CV uses the matching folds (e.g. GroupKFold by month/week)
 - sampler: absolute sizes (10, 20, 30, ...), not % of train data
     - grid? linear for small, log for big (10 -> 10k)?
 - repeat sampling with different seeds (3-times? more is cheap) -> mean ± std

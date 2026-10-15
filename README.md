@@ -33,8 +33,8 @@ lab/                 shared Python code
   models.py          the four model kinds as sklearn Pipelines (preprocessing inside)
   experiment.py      learning-curve loop, metrics, baseline, cross-validation
   plotting.py        shared plot style
-  data_*.py          one loader per dataset
-  temp_prep.py       temporary split + sampler until lab/split.py, lab/sampler.py exist
+  data_*.py          per dataset: loader + its own train/validation split
+  temp_prep.py       temporary sampler until lab/sampler.py exists
 notebooks/           one notebook per dataset (experiments + explanations)
 results/             CSV of every experiment run
 figures/             PNG plots for the report

@@ -122,13 +122,19 @@ def baseline_score(X_train, y_train, X_val, y_val, task) -> float:
     return score(model, X_val, y_val, task, classes)
 
 
-def cross_validate_models(X_train, y_train, kinds, task, k=5, max_rows=None, seed=42):
+def cross_validate_models(X_train, y_train, kinds, task, k=5, folds=None, groups=None, max_rows=None, seed=42):
     """Step 3: k-fold cross-validation of each model kind on the training part.
 
     The validation set is NOT used here. CV splits the training part itself
     into k folds, trains on k-1 of them and scores on the remaining one, k
     times. The mean over the folds estimates how well the model generalizes.
 
+    folds:    optional sklearn splitter, so CV can follow the same logic as the
+              dataset's train/validation split (e.g. GroupKFold to hold out whole
+              months). Default: shuffled KFold (regression) or StratifiedKFold
+              (classification) with k folds.
+    groups:   group label per training row (Series with the same index as
+              X_train), needed by group splitters such as GroupKFold.
     max_rows: optionally run CV on a random subset of the training part
               (useful for the big datasets, where CV on all rows is slow).
 
@@ -137,14 +143,18 @@ def cross_validate_models(X_train, y_train, kinds, task, k=5, max_rows=None, see
     if max_rows is not None and len(X_train) > max_rows:
         X_train = X_train.sample(n=max_rows, random_state=seed)
         y_train = y_train.loc[X_train.index]
+        if groups is not None:
+            groups = groups.loc[X_train.index]
 
     if task == "regression":
-        folds = KFold(n_splits=k, shuffle=True, random_state=seed)
+        default_folds = KFold(n_splits=k, shuffle=True, random_state=seed)
         scoring = "neg_mean_squared_error"
     else:
         # Stratified: every fold keeps the class proportions.
-        folds = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
+        default_folds = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
         scoring = "neg_log_loss"
+    if folds is None:
+        folds = default_folds
 
     rows = []
     with warnings.catch_warnings():
@@ -152,7 +162,8 @@ def cross_validate_models(X_train, y_train, kinds, task, k=5, max_rows=None, see
         for kind in kinds:
             # sklearn scorers follow "higher is better", so MSE / log-loss come
             # back negated. Flip the sign to get the usual loss values.
-            fold_scores = -cross_val_score(make_model(kind), X_train, y_train, cv=folds, scoring=scoring)
+            fold_scores = -cross_val_score(make_model(kind), X_train, y_train, groups=groups,
+                                           cv=folds, scoring=scoring)
             rows.append({
                 "model": kind,
                 "cv_mean": fold_scores.mean(),

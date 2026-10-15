@@ -1,18 +1,15 @@
-"""TEMPORARY stand-in for Jakob's data-prep modules (lab/split.py, lab/sampler.py).
+"""TEMPORARY stand-in for Jakob's sampler module (lab/sampler.py).
 
 Same function names and signatures as agreed in HANDOFF_DATA_PREP.md, so the
-notebooks can already run. Once Jakob's versions exist, change the imports in
+notebooks can already run. Once Jakob's version exists, change the imports in
 the notebooks and delete this file.
+
+(The train/validation split is NOT here: it is dataset-specific and lives next
+to each loader, e.g. split_automobile in lab/data_automobile.py.)
 """
 
 import numpy as np
 from sklearn.model_selection import train_test_split
-
-
-def train_val_split(X, y, task, seed=42):
-    """Set aside 20% of the data for validation (stratified for classification)."""
-    stratify = y if task == "classification" else None
-    return train_test_split(X, y, test_size=0.2, random_state=seed, stratify=stratify)
 
 
 def linear_sizes(start, stop, step):
