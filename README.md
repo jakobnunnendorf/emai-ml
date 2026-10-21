@@ -34,7 +34,7 @@ lab/                 shared Python code
   experiment.py      learning-curve loop, metrics, baseline, cross-validation
   plotting.py        shared plot style
   data_*.py          per dataset: loader + its own train/validation split
-  temp_prep.py       temporary sampler until lab/sampler.py exists
+  sampler.py         random (stratified) training samples of each size
 notebooks/           one notebook per dataset (experiments + explanations)
 results/             CSV of every experiment run
 figures/             PNG plots for the report
@@ -45,5 +45,7 @@ Open a notebook in Jupyter (`jupyter lab`) or run it headless:
 ```bash
 jupyter nbconvert --to notebook --execute --inplace notebooks/automobile.ipynb
 ```
+`notebooks/wine.ipynb` takes seconds; `notebooks/power.ipynb` uses all ~2M minutes and takes
+a few minutes on a laptop (set `MAX_ROWS` in its config cell for a quick test).
 `notebooks/taxi.ipynb` uses a 20k-trip subset by default. For the full run set
 `RUN_FULL = True` in its config cell and run it on the JSI servers with the same command.
