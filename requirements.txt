@@ -1,7 +1,7 @@
-# Python >= 3.10. Install with:  pip install -r requirements.txt
+# Python >= 3.10
 numpy
 pandas
-scikit-learn>=1.8   # we write "no regularization" as LogisticRegression(C=np.inf)
+scikit-learn>=1.8
 matplotlib
 jupyter
-pyarrow             # parquet cache for the taxi features
+pyarrow

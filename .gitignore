@@ -1,8 +1,6 @@
-# raw datasets (a folder or a symlink to one)
 /data
 .DS_Store
-
-# local Python environment / caches
 .venv
 __pycache__/
 .ipynb_checkpoints/
+.claude/
