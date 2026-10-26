@@ -1,7 +1,7 @@
 # IML Lab 1: learning curves
 
 Learning curves for linear and quadratic regression (automobile, household power) and for
-logistic regression (wine, taxi), plus cross-validation.
+logistic regression (wine, taxi), plus cross-validation. Assignment: `Lab1.pdf`.
 
 ```
 lab/         shared code: data loaders + splits, sampler, models, experiments, plots
