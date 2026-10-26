@@ -1,4 +1,4 @@
-"""Plots for the lab, in one shared style so all four datasets look alike."""
+"""Learning-curve plots (same style for all datasets)."""
 
 from pathlib import Path
 
@@ -7,8 +7,6 @@ from matplotlib.ticker import FuncFormatter, LogLocator, NullFormatter
 
 from lab.experiment import summarize
 
-# Fixed colors: train is always blue, validation always orange (a colorblind-
-# safe pair). Different markers too, so the plot also works in black & white.
 TRAIN_STYLE = {"color": "#2a78d6", "marker": "o", "label": "training"}
 VAL_STYLE = {"color": "#eb6834", "marker": "s", "label": "validation"}
 BASELINE_STYLE = {"color": "#888888", "linestyle": "--", "linewidth": 1.2}
@@ -25,7 +23,7 @@ plt.rcParams.update({
 
 
 def _compact_number(value, _position=None):
-    """Axis label like 50, 2k, 1M instead of 5x10^1, 2x10^3, 10^6."""
+    """50, 2k, 1M"""
     for limit, suffix in [(1e6, "M"), (1e3, "k")]:
         if value >= limit:
             return f"{value / limit:g}{suffix}"
@@ -33,23 +31,10 @@ def _compact_number(value, _position=None):
 
 
 def plot_learning_curve(curve, metric_name, title, baseline=None, log_x=False, log_y=False, ylim=None, path=None):
-    """Plot training and validation score against the training-set size.
+    """Training and validation score vs. training-set size, one panel per model.
 
-    One panel per model kind (e.g. linear | quadratic), sharing the y-axis so
-    the models are directly comparable. The line is the MEDIAN over the
-    repeated samples and the shaded band spans the 25%-75% quantiles. We use
-    these instead of mean +/- std because a few unlucky small samples have
-    huge losses that would dominate the mean (see lab.experiment.summarize),
-    and because mean - std can be negative, which breaks a log axis.
-
-    curve       DataFrame from lab.experiment.run_learning_curve
-    metric_name y-axis label, e.g. "MSE" or "log-loss"
-    baseline    optional validation score of the trivial baseline model
-    log_x/log_y logarithmic axes (log_x for the big datasets, log_y when a
-                curve spans several orders of magnitude)
-    ylim        optional (bottom, top) for the y-axis, e.g. to cut off a
-                training loss of exactly 0 on a log axis
-    path        if given, the figure is saved there (folders are created)
+    Line = median over the repeats, band = 25-75% quantiles. `baseline` is drawn
+    as a dashed line; the figure is saved to `path` if given.
     """
     stats = summarize(curve)
     kinds = list(curve["model"].unique())
@@ -68,7 +53,6 @@ def plot_learning_curve(curve, metric_name, title, baseline=None, log_x=False, l
         ax.set_xlabel("training set size")
         if log_x:
             ax.set_xscale("log")
-            # Ticks at 1, 2, 5, 10, 20, 50, ... labelled compactly (1k, 2k, 1M).
             ax.xaxis.set_major_locator(LogLocator(subs=(1, 2, 5)))
             ax.xaxis.set_major_formatter(FuncFormatter(_compact_number))
             ax.xaxis.set_minor_formatter(NullFormatter())

@@ -1,12 +1,7 @@
-"""The experiments of the lab: learning curves (steps 1, 2, 4) and
-cross-validation (step 3).
+"""Learning curves (steps 1, 2, 4) and cross-validation (step 3).
 
-Everything returns plain pandas DataFrames, so results can be saved to CSV,
-inspected in a notebook, and plotted with ``lab.plotting``.
-
-Scores are always "lower is better":
-    regression      -> mean squared error (MSE)
-    classification  -> logistic loss (log-loss / cross-entropy)
+Scores are losses (lower is better): MSE for regression, log-loss for
+classification.
 """
 
 import time
@@ -22,17 +17,10 @@ from lab.models import make_baseline, make_model
 
 
 def score(model, X, y, task: str, classes=None) -> float:
-    """Score a fitted model on (X, y). Lower is better.
-
-    For classification ``classes`` must list ALL classes of the dataset, so
-    log-loss is computed over the same set of classes for every sample.
-    """
+    """MSE or log-loss of a fitted model. `classes` = all classes of the dataset."""
     if task == "regression":
         return mean_squared_error(y, model.predict(X))
 
-    # The model can only output probabilities for classes it saw during
-    # training. The sampler guarantees every class is present; check anyway
-    # so a bad sample fails loudly instead of giving a wrong number.
     if len(model.classes_) != len(classes):
         raise ValueError(
             f"model was trained on classes {list(model.classes_)} but the dataset "
@@ -42,31 +30,17 @@ def score(model, X, y, task: str, classes=None) -> float:
 
 
 def run_learning_curve(X_train, y_train, X_val, y_val, kinds, samples, task, verbose=True):
-    """Fit every model kind on every sampled training set and score it.
+    """Fit every model kind on every sample from the sampler and score it.
 
-    Parameters
-    ----------
-    X_train, y_train : the 80% training part (DataFrame / Series)
-    X_val, y_val     : the 20% validation part, never used for fitting
-    kinds            : list of model kinds, e.g. ["linear", "quadratic"]
-    samples          : iterable of (size, repeat, idx) from the sampler, where
-                       idx are positional indices into X_train
-    task             : "regression" or "classification"
-
-    Returns
-    -------
-    DataFrame with one row per (model, size, repeat):
-        model, size, repeat, train_score, val_score, fit_seconds
-    train_score is measured on the sample the model was fitted on.
+    samples: (size, repeat, idx) tuples, idx = positions in X_train.
+    Returns one row per (model, size, repeat) with train_score, val_score and
+    fit_seconds.
     """
     classes = np.unique(y_train) if task == "classification" else None
     rows = []
     last_size = None
 
-    # Unregularized logistic regression on tiny (separable) samples never
-    # "converges" because the best weights are infinitely large. sklearn warns
-    # about it on every fit; that is expected here (see lab/models.py), so we
-    # silence just that warning to keep the output readable.
+    # unregularized logistic regression on separable samples never converges
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=ConvergenceWarning)
 
@@ -100,13 +74,8 @@ def q75(x):
 
 
 def summarize(curve: pd.DataFrame) -> pd.DataFrame:
-    """Statistics over the repeats, per model and size.
-
-    Besides mean and std we also report the median and the 25% / 75%
-    quantiles. With tiny samples a single unlucky repeat can have a loss
-    1000x larger than the others; such outliers dominate mean and std, while
-    median and quantiles describe the typical behaviour. The plots use those.
-    """
+    """Mean, std, median and quartiles over the repeats, per model and size.
+    The plots use median and quartiles (single bad repeats dominate the mean)."""
     return (
         curve.groupby(["model", "size"])[["train_score", "val_score"]]
         .agg(["mean", "std", "median", q25, q75])
@@ -115,30 +84,21 @@ def summarize(curve: pd.DataFrame) -> pd.DataFrame:
 
 
 def baseline_score(X_train, y_train, X_val, y_val, task) -> float:
-    """Validation score of the trivial baseline (see lab.models.make_baseline),
-    fitted on the full training part. Used as a horizontal line in the plots."""
+    """Validation score of the trivial baseline fitted on the whole training part."""
     classes = np.unique(y_train) if task == "classification" else None
     model = make_baseline(task).fit(X_train, y_train)
     return score(model, X_val, y_val, task, classes)
 
 
 def cross_validate_models(X_train, y_train, kinds, task, k=5, folds=None, groups=None, max_rows=None, seed=42):
-    """Step 3: k-fold cross-validation of each model kind on the training part.
+    """k-fold CV of each model kind on the training part.
 
-    The validation set is NOT used here. CV splits the training part itself
-    into k folds, trains on k-1 of them and scores on the remaining one, k
-    times. The mean over the folds estimates how well the model generalizes.
+    folds:    sklearn splitter (e.g. GroupKFold); default shuffled KFold /
+              StratifiedKFold
+    groups:   group per training row, for group splitters
+    max_rows: run CV on a random subset (big datasets)
 
-    folds:    optional sklearn splitter, so CV can follow the same logic as the
-              dataset's train/validation split (e.g. GroupKFold to hold out whole
-              months). Default: shuffled KFold (regression) or StratifiedKFold
-              (classification) with k folds.
-    groups:   group label per training row (Series with the same index as
-              X_train), needed by group splitters such as GroupKFold.
-    max_rows: optionally run CV on a random subset of the training part
-              (useful for the big datasets, where CV on all rows is slow).
-
-    Returns a DataFrame with columns: model, cv_mean, cv_std, n_rows.
+    Returns columns model, cv_mean, cv_std, n_rows.
     """
     if max_rows is not None and len(X_train) > max_rows:
         X_train = X_train.sample(n=max_rows, random_state=seed)
@@ -150,7 +110,6 @@ def cross_validate_models(X_train, y_train, kinds, task, k=5, folds=None, groups
         default_folds = KFold(n_splits=k, shuffle=True, random_state=seed)
         scoring = "neg_mean_squared_error"
     else:
-        # Stratified: every fold keeps the class proportions.
         default_folds = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
         scoring = "neg_log_loss"
     if folds is None:
@@ -160,8 +119,7 @@ def cross_validate_models(X_train, y_train, kinds, task, k=5, folds=None, groups
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=ConvergenceWarning)
         for kind in kinds:
-            # sklearn scorers follow "higher is better", so MSE / log-loss come
-            # back negated. Flip the sign to get the usual loss values.
+            # sklearn scorers are negated losses
             fold_scores = -cross_val_score(make_model(kind), X_train, y_train, groups=groups,
                                            cv=folds, scoring=scoring)
             rows.append({

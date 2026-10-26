@@ -1,51 +1,34 @@
-# IML Lab 1: learning curves for linear, quadratic and logistic regression
+# IML Lab 1: learning curves
 
-Assignment: `Lab1.pdf` (due 26 Oct). Team plan: `initial-plan.md`.
-Interface between data prep and the pipeline: `HANDOFF_DATA_PREP.md`.
+Learning curves for linear and quadratic regression (automobile, household power) and for
+logistic regression (wine, taxi), plus cross-validation.
 
-## Setup
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
 ```
-No GPU needed; everything runs on the CPU.
+lab/         shared code: data loaders + splits, sampler, models, experiments, plots
+notebooks/   one notebook per dataset, with the results and their explanation
+results/     CSV of every run
+figures/     plots
+```
 
-## Data (not in git)
-Put the raw files in `data/` (or point the `LAB_DATA_DIR` environment variable elsewhere):
+| Notebook | Dataset (UCI) | Task |
+|---|---|---|
+| `notebooks/automobile.ipynb` | Automobile | small regression |
+| `notebooks/power.ipynb` | Individual household electric power consumption | large regression |
+| `notebooks/wine.ipynb` | Wine | small classification |
+| `notebooks/taxi.ipynb` | Taxi Service Trajectory (ECML PKDD 2015) | large classification |
+
+## Running
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+jupyter nbconvert --to notebook --execute --inplace notebooks/automobile.ipynb
+```
+The raw data go into `data/` (or set `LAB_DATA_DIR`):
 ```
 data/automobile/imports-85.data
 data/wine/wine.data
 data/household_power_consumption.txt
-data/taxi/train.csv            # see below
+data/taxi/train.csv
 ```
-The taxi zip contains another zip. Unpack `train.csv` once:
-```bash
-mkdir -p data/taxi
-unzip -j "data/taxi+service+trajectory+prediction+challenge+ecml+pkdd+2015.zip" train.csv.zip -d data/taxi
-unzip data/taxi/train.csv.zip -d data/taxi && rm data/taxi/train.csv.zip
-```
-On first use `load_taxi()` builds `data/taxi_features.parquet` (about a minute).
-
-## Layout
-```
-lab/                 shared Python code
-  models.py          the four model kinds as sklearn Pipelines (preprocessing inside)
-  experiment.py      learning-curve loop, metrics, baseline, cross-validation
-  plotting.py        shared plot style
-  data_*.py          per dataset: loader + its own train/validation split
-  sampler.py         random (stratified) training samples of each size
-notebooks/           one notebook per dataset (experiments + explanations)
-results/             CSV of every experiment run
-figures/             PNG plots for the report
-```
-
-## Running
-Open a notebook in Jupyter (`jupyter lab`) or run it headless:
-```bash
-jupyter nbconvert --to notebook --execute --inplace notebooks/automobile.ipynb
-```
-`notebooks/wine.ipynb` takes seconds; `notebooks/power.ipynb` uses all ~2M minutes and takes
-a few minutes on a laptop (set `MAX_ROWS` in its config cell for a quick test).
-`notebooks/taxi.ipynb` uses a 20k-trip subset by default. For the full run set
-`RUN_FULL = True` in its config cell and run it on the JSI servers with the same command.
+For the taxi data, unzip `train.csv` from the downloaded archive (it is a zip inside a zip).
+The taxi notebook uses a random subset of 20,000 trips; set `RUN_FULL = True` for all trips.
