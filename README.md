@@ -12,10 +12,10 @@ figures/     plots
 
 | Notebook | Dataset (UCI) | Task |
 |---|---|---|
-| `notebooks/automobile.ipynb` | Automobile | small regression |
-| `notebooks/power.ipynb` | Individual household electric power consumption | large regression |
-| `notebooks/wine.ipynb` | Wine | small classification |
-| `notebooks/taxi.ipynb` | Taxi Service Trajectory (ECML PKDD 2015) | large classification |
+| `notebooks/automobile.ipynb` | [Automobile](https://archive.ics.uci.edu/dataset/10/automobile) | small regression |
+| `notebooks/power.ipynb` | [Individual household electric power consumption](https://archive.ics.uci.edu/dataset/235/individual+household+electric+power+consumption) | large regression |
+| `notebooks/wine.ipynb` | [Wine](https://archive.ics.uci.edu/dataset/109/wine) | small classification |
+| `notebooks/taxi.ipynb` | [Taxi Service Trajectory (ECML PKDD 2015)](https://archive.ics.uci.edu/dataset/339/taxi+service+trajectory+prediction+challenge+ecml+pkdd+2015) | large classification |
 
 ## Running
 ```bash
